@@ -169,43 +169,19 @@ async function apiGet(sheet){
 async function apiPost(payload){
   setSaving(true);
   try{
-    await fetch(API, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
+    await fetch(API,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
     });
     showFlash();
     return {ok:true};
-  }catch(e){ throw e; }
-  finally{ setSaving(false); }
+  }catch(e){throw e;}
+  finally{setSaving(false);}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+const SHEETS=['Calendrier tournages','Commanditaires','Ordre de diffusion TV','à faire','Produits de commandites','Épisodes WEB','SODEC','ordre Diffusion'];
 
 async function loadAll(){
   setStatus('am','Chargement...');
