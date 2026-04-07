@@ -22,8 +22,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:va
 .flash.on{display:inline-block}
 .sbtn{display:flex;align-items:center;gap:5px;padding:5px 11px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);cursor:pointer;background:var(--bg);color:var(--tx)}
 .sbtn:hover{background:var(--bg2)}
-.saving{font-size:11px;color:var(--am);padding:2px 8px;background:#FAEEDA;border-radius:var(--r);display:none}
-.saving.on{display:inline-block}
 .nav{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:.75rem}
 .nb{padding:6px 13px;font-size:12px;border:0.5px solid var(--bd);border-radius:var(--r);cursor:pointer;background:var(--bg2);color:var(--tx2);white-space:nowrap;transition:all .15s}
 .nb.on{background:var(--bg);color:var(--tx);border-color:var(--bd2);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
@@ -88,11 +86,11 @@ td input[type=checkbox]{width:auto;min-width:0}
 .gr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .gr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .ma{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--bd)}
+.saving{font-size:11px;color:var(--am);padding:2px 8px;background:#FAEEDA;border-radius:var(--r);display:none}
+.saving.on{display:inline-block}
 .rel{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#E6F1FB;color:var(--bl);border-radius:var(--r);font-size:11px;cursor:pointer;border:0.5px solid #B5D4F4}
 .rel:hover{background:#B5D4F4}
 .section-label{font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;padding:.5rem 1rem;background:var(--bg2);border-bottom:0.5px solid var(--bd)}
-.info-box{background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:var(--r);padding:10px 14px;margin:.75rem;font-size:12px;color:#0c447c;line-height:1.6}
-.write-warn{background:#FAEEDA;border:0.5px solid #FAC775;border-radius:var(--r);padding:8px 14px;font-size:11px;color:#854F0B;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -103,7 +101,7 @@ td input[type=checkbox]{width:auto;min-width:0}
   <div class="sbar">
     <div class="dot" id="dot"></div>
     <span class="stxt" id="stxt">Connexion...</span>
-    <span class="flash" id="flash">✓ Sauvegardé</span>
+    <span class="flash" id="flash">Sauvegardé dans Google Sheets ✓</span>
     <span class="saving" id="saving">Sauvegarde...</span>
     <button class="sbtn" onclick="syncAll()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
@@ -141,16 +139,9 @@ td input[type=checkbox]{width:auto;min-width:0}
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
-const SHEET_ID = '1iCVODe1UtFLsRYF8_0OqgWZOAyvQ6eGqOZlAb48dpvM';
-const API_KEY  = 'AIzaSyBEN4TDDzVxDaTJkA7NEKDJex6P6oN6ae8';
-const BASE_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
-
-// Apps Script URL pour l'écriture — laisser vide si pas encore configuré
-let WRITE_URL = localStorage.getItem('avex_write_url') || '';
-
-let GS = {};
-let currentTab = 'dash';
+const API='https://script.google.com/macros/s/AKfycbw_dwzf80vtmzSWFVvDxeQiRRW_Fe8G6SzTqNNB7xROyl738NGpW-KEv3uE6Vo88Ztjsg/exec';
+let GS={};
+let currentTab='dash';
 
 // ── UTILITAIRES ──────────────────────────────────────────────
 function setStatus(s,msg){document.getElementById('dot').className='dot '+s;document.getElementById('stxt').textContent=msg;}
@@ -159,156 +150,76 @@ function setSaving(v){document.getElementById('saving').classList[v?'add':'remov
 function bx(v,c='gr'){return`<span class="bx ${c}">${v||'—'}</span>`;}
 function payBx(v){if(!v||v==='-'||!String(v).trim())return bx('—');const l=String(v).toLowerCase();return l.includes('payé')?bx(v,'g'):l.includes('attente')||l.includes('facturer')||l.includes('relancer')||l.includes('envoyé')?bx(v,'a'):bx(v,'gr');}
 function etBx(v){if(!v||v==='-'||!String(v).trim())return bx('—');const l=String(v).toLowerCase();return l.includes('signé')||l==='signe'?bx(v,'g'):l.includes('confirmer')||l.includes('relancer')?bx(v,'a'):l.includes('pas de')||l.includes('non')?bx(v,'r'):bx(v,'gr');}
+function diffBx(v){if(!v||v==='-'||!String(v).trim())return bx('—');return v==='Effectué'?bx(v,'g'):v==='À venir'?bx(v,'b'):bx(v,'gr');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function openModal(html){document.getElementById('modal-inner').innerHTML=html;document.getElementById('modal-bg').classList.add('on');}
 function closeModal(){document.getElementById('modal-bg').classList.remove('on');}
 function rows(sheet,skip=1){return(GS[sheet]||[]).slice(skip).filter(r=>r?.some(c=>String(c||'').trim()));}
 function v(r,i){return String(r?.[i]||'').trim();}
 
-// ── LECTURE (Google Sheets API) ───────────────────────────────
-async function fetchSheet(range) {
-  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const d = await r.json();
-  return d.values || [];
+// ── API ──────────────────────────────────────────────────────
+async function apiGet(sheet){
+  const r=await fetch(`${API}?sheet=${encodeURIComponent(sheet)}`);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return d.data||[];
 }
 
-const SHEETS_LIST = [
-  'Calendrier tournages',
-  'Commanditaires',
-  'Ordre de diffusion TV',
-  'à faire',
-  'Produits de commandites',
-  'Épisodes WEB',
-  'SODEC',
-  'ordre Diffusion'
-];
-
-async function loadAll() {
-  setStatus('am','Chargement...');
-  try {
-    const results = await Promise.all(
-      SHEETS_LIST.map(s => fetchSheet(s + '!A1:AD200').catch(() => []))
-    );
-    SHEETS_LIST.forEach((s,i) => GS[s] = results[i]);
-    setStatus('gn', `Connecté · ${new Date().toLocaleTimeString('fr-CA')}`);
-    return true;
-  } catch(e) {
-    setStatus('rd', 'Erreur: ' + e.message);
-    return false;
-  }
-}
-
-async function reloadSheet(sheet) {
-  GS[sheet] = await fetchSheet(sheet + '!A1:AD200').catch(() => []);
-}
-
-// ── ÉCRITURE (Apps Script) ────────────────────────────────────
-async function apiPost(payload) {
-  if (!WRITE_URL) {
-    showWriteSetup();
-    return null;
-  }
+async function apiPost(payload){
   setSaving(true);
-  try {
-    const r = await fetch(WRITE_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
+  try{
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
     showFlash();
     return d;
-  } finally {
-    setSaving(false);
-  }
+  }finally{setSaving(false);}
 }
 
-function showWriteSetup() {
-  openModal(`<h3>⚙️ Configuration de l'écriture</h3>
-    <p style="font-size:13px;color:var(--tx2);margin-bottom:16px">Pour pouvoir modifier les données, tu dois déployer un Google Apps Script. Voici les étapes :</p>
-    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;font-size:12px;line-height:1.8;margin-bottom:16px">
-      <strong>1.</strong> Ouvre ton Google Sheet<br>
-      <strong>2.</strong> Menu <strong>Extensions → Apps Script</strong><br>
-      <strong>3.</strong> Efface le code existant et colle le code ci-dessous<br>
-      <strong>4.</strong> Clique <strong>Déployer → Nouveau déploiement</strong><br>
-      <strong>5.</strong> Type : Application Web · Accès : Tout le monde<br>
-      <strong>6.</strong> Copie l'URL générée et colle-la ici
-    </div>
-    <div style="background:#1a1a1a;border-radius:var(--r);padding:12px;font-size:11px;color:#e6edf3;font-family:monospace;line-height:1.6;margin-bottom:16px;overflow-x:auto;white-space:pre">function doGet(e){return doPost(e)}
-function doPost(e){
+const SHEETS=['Calendrier tournages','Commanditaires','Ordre de diffusion TV','à faire','Produits de commandites','Épisodes WEB','SODEC','ordre Diffusion'];
+
+async function loadAll(){
+  setStatus('am','Chargement...');
   try{
-    var p=JSON.parse(e.postData.contents);
-    var ss=SpreadsheetApp.openById('${SHEET_ID}');
-    var sh=ss.getSheetByName(p.sheet);
-    if(!sh)return out({error:'Sheet not found: '+p.sheet});
-    if(p.action==='update'){
-      sh.getRange(p.row,p.col).setValue(p.value);
-      return out({ok:true});
-    }
-    if(p.action==='append'){
-      sh.appendRow(p.row);
-      return out({ok:true});
-    }
-    if(p.action==='delete'){
-      sh.deleteRow(p.row);
-      return out({ok:true});
-    }
-    return out({error:'Unknown action'});
-  }catch(err){return out({error:err.message});}
-}
-function out(d){
-  return ContentService.createTextOutput(JSON.stringify(d))
-    .setMimeType(ContentService.MimeType.JSON);
-}</div>
-    <div class="ff"><label>URL de ton Apps Script déployé</label>
-      <input id="write-url" placeholder="https://script.google.com/macros/s/..." value="${esc(WRITE_URL)}">
-    </div>
-    <div class="ma">
-      <button class="btn" onclick="closeModal()">Annuler</button>
-      <button class="btn p" onclick="saveWriteUrl()">Enregistrer l'URL</button>
-    </div>`);
+    const res=await Promise.all(SHEETS.map(s=>apiGet(s).catch(()=>[])));
+    SHEETS.forEach((s,i)=>GS[s]=res[i]);
+    setStatus('gn',`Connecté · ${new Date().toLocaleTimeString('fr-CA')}`);
+    return true;
+  }catch(e){setStatus('rd','Erreur: '+e.message);return false;}
 }
 
-window.saveWriteUrl = function() {
-  const url = document.getElementById('write-url').value.trim();
-  if (!url) return alert('Entre l\'URL du Apps Script');
-  WRITE_URL = url;
-  localStorage.setItem('avex_write_url', url);
-  closeModal();
-  showFlash();
-};
+async function reload(sheet){
+  GS[sheet]=await apiGet(sheet);
+}
 
 // ── NAVIGATION ───────────────────────────────────────────────
-function goTab(id, el) {
+function goTab(id,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   document.getElementById('pg-'+id).classList.add('on');
   el.classList.add('on');
-  currentTab = id;
+  currentTab=id;
   ({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask})[id]?.();
 }
 
-async function syncAll() {
+async function syncAll(){
   setStatus('am','Synchronisation...');
-  const ok = await loadAll();
-  if (ok) ({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask})[currentTab]?.();
+  const ok=await loadAll();
+  if(ok)({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask})[currentTab]?.();
 }
 
 // ── TABLEAU DE BORD ───────────────────────────────────────────
-function rDash() {
-  const pg = document.getElementById('pg-dash');
-  const tour = rows('Calendrier tournages');
-  const sp = rows('Commanditaires');
-  const conf = tour.filter(r=>v(r,13)==='x'||v(r,13)==='X').length;
-  const signes = sp.filter(r=>v(r,2).toLowerCase().includes('signé')).length;
-  const payes = sp.filter(r=>v(r,8).toLowerCase().includes('payé')).length;
-  const warns = sp.filter(r=>v(r,2).toLowerCase().includes('relancer'));
-  const attente = sp.filter(r=>{const p=v(r,8).toLowerCase();return p&&!p.includes('payé')&&p!=='n/a'&&p!=='interne';}).length;
-
-  pg.innerHTML = `
+function rDash(){
+  const pg=document.getElementById('pg-dash');
+  const tour=rows('Calendrier tournages');
+  const sp=rows('Commanditaires');
+  const conf=tour.filter(r=>v(r,13)==='x'||v(r,13)==='X').length;
+  const signes=sp.filter(r=>v(r,2).toLowerCase().includes('signé')).length;
+  const payes=sp.filter(r=>v(r,8).toLowerCase().includes('payé')).length;
+  const attente=sp.filter(r=>{const p=v(r,8).toLowerCase();return p&&!p.includes('payé')&&p!=='n/a'&&p!=='interne';}).length;
+  const warns=sp.filter(r=>v(r,2).toLowerCase().includes('relancer'));
+  pg.innerHTML=`
     <div class="stats">
       <div class="stat"><div class="stat-l">Tournages planifiés</div><div class="stat-v">${tour.length}</div></div>
       <div class="stat"><div class="stat-l">Confirmés</div><div class="stat-v c-gn">${conf}</div></div>
@@ -318,36 +229,36 @@ function rDash() {
       <div class="stat"><div class="stat-l">Factures payées</div><div class="stat-v c-gn">${payes}</div></div>
       <div class="stat"><div class="stat-l">Suivi requis</div><div class="stat-v c-am">${attente}</div></div>
     </div>
-    ${warns.length?`<div class="warn">⚠ Commanditaires à relancer : ${warns.map(r=>v(r,1)).join(', ')}</div>`:''}
+    ${warns.length?`<div class="warn">Commanditaires à relancer : ${warns.map(r=>v(r,1)).join(', ')}</div>`:''}
     <div class="db2">
       <div class="card"><div class="ch"><span class="ct">Tournages non confirmés</span></div>
         <div class="tw"><table><thead><tr><th>Espèce</th><th>Caméra</th><th>Date</th><th>Endroit</th></tr></thead>
-        <tbody>${tour.filter(r=>v(r,13)!=='x'&&v(r,13)!=='X').slice(0,8).map(r=>`<tr><td>${esc(v(r,0))}</td><td>${esc(v(r,1))}</td><td>${esc(v(r,5))}</td><td>${esc(v(r,7))}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--tx2);text-align:center;padding:1rem">Tous les tournages sont confirmés ✓</td></tr>'}
+        <tbody>${tour.filter(r=>v(r,13)!=='x'&&v(r,13)!=='X').slice(0,8).map(r=>`<tr><td>${esc(v(r,0))}</td><td>${esc(v(r,1))}</td><td>${esc(v(r,5))}</td><td>${esc(v(r,7))}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--tx2);text-align:center;padding:1rem">Tous les tournages sont confirmés</td></tr>'}
         </tbody></table></div>
       </div>
       <div class="card"><div class="ch"><span class="ct">Paiements en attente</span></div>
         <div class="tw"><table><thead><tr><th>S.</th><th>Commanditaire</th><th>Argent</th><th>Statut</th></tr></thead>
-        <tbody>${sp.filter(r=>{const p=v(r,8).toLowerCase();return p&&!p.includes('payé')&&p!=='n/a';}).slice(0,8).map(r=>`<tr><td>S${esc(v(r,0))}</td><td>${esc(v(r,1))}</td><td>${esc(v(r,5))}</td><td>${payBx(v(r,8))}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--tx2);text-align:center;padding:1rem">Aucun paiement en attente ✓</td></tr>'}
+        <tbody>${sp.filter(r=>{const p=v(r,8).toLowerCase();return p&&!p.includes('payé')&&p!=='n/a';}).slice(0,8).map(r=>`<tr><td>S${esc(v(r,0))}</td><td>${esc(v(r,1))}</td><td>${esc(v(r,5))}</td><td>${payBx(v(r,8))}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--tx2);text-align:center;padding:1rem">Aucun paiement en attente</td></tr>'}
         </tbody></table></div>
       </div>
     </div>
     <div class="card"><div class="ch"><span class="ct">Tâches urgentes</span><button class="btn sm p" onclick="goTab('taches',document.querySelectorAll('.nb')[8])">Voir tout</button></div>
       <div style="padding:.75rem 1rem">
-        ${rows('à faire',2).filter(r=>v(r,2)==='x'||v(r,2)==='X').slice(0,6).map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--bd)">${bx('Urgent','r')}<span style="color:var(--tx2);min-width:65px">${esc(v(r,0))}</span><span>${esc(v(r,1))}</span></div>`).join('')||'<span style="color:var(--tx2)">Aucune tâche urgente ✓</span>'}
+        ${rows('à faire',2).filter(r=>v(r,2)==='x'||v(r,2)==='X').slice(0,6).map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--bd)">${bx('Urgent','r')}<span style="color:var(--tx2);min-width:65px">${esc(v(r,0))}</span><span>${esc(v(r,1))}</span></div>`).join('')||'<span style="color:var(--tx2)">Aucune tâche urgente</span>'}
       </div>
     </div>`;
 }
 
 // ── TOURNAGES ─────────────────────────────────────────────────
-let _tData = [];
-function rTour() {
-  _tData = rows('Calendrier tournages');
-  document.getElementById('pg-tournages').innerHTML = `
+let _tData=[];
+function rTour(){
+  _tData=rows('Calendrier tournages');
+  document.getElementById('pg-tournages').innerHTML=`
     <div class="card">
       <div class="ch"><span class="ct">Calendrier des tournages (${_tData.length})</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <select id="tf-y" onchange="filterTour()" style="padding:4px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2)">
-            <option value="">Toutes années</option>${['2024','2025','2026','2027','2028'].map(y=>`<option>${y}</option>`).join('')}
+            <option value="">Toutes les années</option>${['2024','2025','2026','2027','2028'].map(y=>`<option>${y}</option>`).join('')}
           </select>
           <select id="tf-ok" onchange="filterTour()" style="padding:4px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2)">
             <option value="">Tous</option><option value="1">Confirmés</option><option value="0">Non confirmés</option>
@@ -357,7 +268,7 @@ function rTour() {
         </div>
       </div>
       <div class="tw"><table>
-        <thead><tr><th>Espèce / détails</th><th>Caméra</th><th>Date</th><th>Endroit</th><th>Cibles</th><th>Contact</th><th>Confirmé</th><th>Coût réel</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Espèce / détails</th><th>Caméra</th><th>Date</th><th>Endroit</th><th>Cibles</th><th>Contact</th><th>Confirmé</th><th>Coût réel</th><th style="width:80px">Actions</th></tr></thead>
         <tbody id="tour-body"></tbody>
       </table></div>
       <div class="ar"><span style="font-size:11px;color:var(--tx2)" id="tour-cnt"></span></div>
@@ -365,20 +276,20 @@ function rTour() {
   filterTour();
 }
 
-function filterTour() {
-  const fy = document.getElementById('tf-y')?.value||'';
-  const fok = document.getElementById('tf-ok')?.value||'';
-  const fq = (document.getElementById('tf-q')?.value||'').toLowerCase();
-  const filtered = _tData.filter(r => {
-    if(fy&&!v(r,5).includes(fy))return false;
-    const ok = v(r,13)==='x'||v(r,13)==='X';
+function filterTour(){
+  const fy=document.getElementById('tf-y')?.value||'';
+  const fok=document.getElementById('tf-ok')?.value||'';
+  const fq=(document.getElementById('tf-q')?.value||'').toLowerCase();
+  const filtered=_tData.filter((r,i)=>{
+    if(fy&&!v(r,5).includes(fy)&&!String(v(r,3)).includes(fy))return false;
+    const ok=v(r,13)==='x'||v(r,13)==='X';
     if(fok==='1'&&!ok)return false;
     if(fok==='0'&&ok)return false;
-    if(fq&&!v(r,0).toLowerCase().includes(fq)&&!v(r,7).toLowerCase().includes(fq))return false;
+    if(fq&&!v(r,0).toLowerCase().includes(fq)&&!v(r,7).toLowerCase().includes(fq)&&!v(r,8).toLowerCase().includes(fq))return false;
     return true;
   });
-  const rowIdx = r => _tData.indexOf(r)+2;
-  document.getElementById('tour-body').innerHTML = filtered.map(r=>`<tr>
+  const rowIdx=r=>_tData.indexOf(r)+2;
+  document.getElementById('tour-body').innerHTML=filtered.map(r=>`<tr>
     <td><input value="${esc(v(r,0))}" onchange="updateCell('Calendrier tournages',${rowIdx(r)},1,this.value)"></td>
     <td><select onchange="updateCell('Calendrier tournages',${rowIdx(r)},2,this.value)">${['Ben','Oli','JP','Oli + Ben','Benoit','Benoit + Oli','olivier',''].map(o=>`<option${v(r,1)===o?' selected':''}>${o}</option>`).join('')}</select></td>
     <td><input value="${esc(v(r,5))}" onchange="updateCell('Calendrier tournages',${rowIdx(r)},6,this.value)" style="min-width:100px"></td>
@@ -389,15 +300,15 @@ function filterTour() {
     <td><input value="${esc(v(r,28))}" onchange="updateCell('Calendrier tournages',${rowIdx(r)},29,this.value)" style="min-width:70px"></td>
     <td><button class="del-btn" onclick="deleteRow('Calendrier tournages',${rowIdx(r)},rTour)">Supprimer</button></td>
   </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--tx2)">Aucun résultat</td></tr>';
-  const el = document.getElementById('tour-cnt');
-  if(el) el.textContent = `${filtered.length} / ${_tData.length} tournages`;
+  const el=document.getElementById('tour-cnt');
+  if(el)el.textContent=`${filtered.length} / ${_tData.length} tournages`;
 }
 
 function openAddTournage(){
   openModal(`<h3>Nouveau tournage</h3>
     <div class="gr2">
       <div class="ff"><label>Espèce / détails</label><input id="nt-e" placeholder="ex: Orignal TN 2026"></div>
-      <div class="ff"><label>Caméraman</label><select id="nt-c"><option></option><option>Ben</option><option>Oli</option><option>JP</option><option>Oli + Ben</option><option>Benoit</option></select></div>
+      <div class="ff"><label>Caméraman</label><select id="nt-c"><option></option><option>Ben</option><option>Oli</option><option>JP</option><option>Oli + Ben</option><option>Benoit</option><option>Benoit + Oli</option></select></div>
     </div>
     <div class="gr2">
       <div class="ff"><label>Date</label><input id="nt-d" placeholder="15 au 22 mars 2026"></div>
@@ -419,8 +330,26 @@ function openAddTournage(){
 }
 
 async function saveTournage(){
-  const row=[document.getElementById('nt-e').value,document.getElementById('nt-c').value,'','',document.getElementById('nt-sh').value,document.getElementById('nt-d').value,'',document.getElementById('nt-en').value,document.getElementById('nt-ci').value,document.getElementById('nt-co').value,'','','',document.getElementById('nt-ok').value,'','','',document.getElementById('nt-no').value];
-  try{await apiPost({action:'append',sheet:'Calendrier tournages',row});closeModal();await reloadSheet('Calendrier tournages');rTour();}catch(e){alert('Erreur: '+e.message);}
+  const row=[
+    document.getElementById('nt-e').value,
+    document.getElementById('nt-c').value,
+    '','',
+    document.getElementById('nt-sh').value,
+    document.getElementById('nt-d').value,'',
+    document.getElementById('nt-en').value,
+    document.getElementById('nt-ci').value,
+    document.getElementById('nt-co').value,
+    '','','',
+    document.getElementById('nt-ok').value,
+    '','','',
+    document.getElementById('nt-no').value
+  ];
+  try{
+    await apiPost({action:'append',sheet:'Calendrier tournages',row});
+    closeModal();
+    await reload('Calendrier tournages');
+    rTour();
+  }catch(e){alert('Erreur: '+e.message);}
 }
 
 // ── DIFFUSION TV ──────────────────────────────────────────────
@@ -437,7 +366,7 @@ function rDiff(){
         ${seasons.map(s=>`<button class="sfb" onclick="setDSF(${s},this)">S${s}</button>`).join('')}
       </div>
       <div class="tw"><table>
-        <thead><tr><th>S.</th><th>Ép.</th><th>Lieu</th><th>Sujet</th><th>Max</th><th>Wild TV</th><th>Remise Wild</th><th>Télémag</th><th>Remise Tél.</th><th>État</th><th>Actions</th></tr></thead>
+        <thead><tr><th>S.</th><th>Ép.</th><th>Lieu</th><th>Sujet</th><th>Max</th><th>Wild TV</th><th>Remise Wild</th><th>Télémag</th><th>Remise Tél.</th><th>État</th><th style="width:80px">Actions</th></tr></thead>
         <tbody id="diff-body"></tbody>
       </table></div>
     </div>`;
@@ -457,7 +386,7 @@ function renderDiff(){
     <td><input value="${esc(v(r,7))}" onchange="updateCell('Ordre de diffusion TV',${rowIdx(r)},8,this.value)" style="min-width:90px"></td>
     <td><input value="${esc(v(r,8))}" onchange="updateCell('Ordre de diffusion TV',${rowIdx(r)},9,this.value)" style="min-width:100px"></td>
     <td><input value="${esc(v(r,9))}" onchange="updateCell('Ordre de diffusion TV',${rowIdx(r)},10,this.value)" style="min-width:90px"></td>
-    <td>${v(r,12)?bx(v(r,12),v(r,12)==='Effectué'?'g':'b'):bx('—')}</td>
+    <td>${diffBx(v(r,12))}</td>
     <td><button class="del-btn" onclick="deleteRow('Ordre de diffusion TV',${rowIdx(r)},rDiff)">Supprimer</button></td>
   </tr>`).join('');
 }
@@ -473,12 +402,12 @@ function openAddEpisode(){
       <div class="ff"><label>Sujet</label><input id="ne-su"></div>
     </div>
     <div class="gr2">
+      <div class="ff"><label>Diffusion Max</label><input id="ne-m"></div>
       <div class="ff"><label>Wild TV</label><input id="ne-w"></div>
-      <div class="ff"><label>Remise Wild</label><input id="ne-rw"></div>
     </div>
     <div class="gr2">
+      <div class="ff"><label>Remise Wild</label><input id="ne-rw"></div>
       <div class="ff"><label>Télémag</label><input id="ne-t"></div>
-      <div class="ff"><label>Remise Tél.</label><input id="ne-rt"></div>
     </div>
     <div class="ma">
       <button class="btn" onclick="closeModal()">Annuler</button>
@@ -486,7 +415,15 @@ function openAddEpisode(){
     </div>`);
 }
 async function saveEpisode(){
-  try{await apiPost({action:'append',sheet:'Ordre de diffusion TV',row:[document.getElementById('ne-s').value,document.getElementById('ne-ep').value,document.getElementById('ne-l').value,document.getElementById('ne-su').value,'','',document.getElementById('ne-w').value,document.getElementById('ne-rw').value,document.getElementById('ne-t').value,document.getElementById('ne-rt').value,'','',document.getElementById('ne-et').value]});closeModal();await reloadSheet('Ordre de diffusion TV');rDiff();}catch(e){alert('Erreur: '+e.message);}
+  try{
+    await apiPost({action:'append',sheet:'Ordre de diffusion TV',row:[
+      document.getElementById('ne-s').value,document.getElementById('ne-ep').value,
+      document.getElementById('ne-l').value,document.getElementById('ne-su').value,
+      document.getElementById('ne-m').value,'',document.getElementById('ne-w').value,'',
+      document.getElementById('ne-t').value,'','','',document.getElementById('ne-et').value
+    ]});
+    closeModal();await reload('Ordre de diffusion TV');rDiff();
+  }catch(e){alert('Erreur: '+e.message);}
 }
 
 // ── ORDRE SAISONS ─────────────────────────────────────────────
@@ -498,7 +435,14 @@ function rOrdre(){
       <div class="ch"><span class="ct">Ordre de diffusion par saison — S3 à S8</span></div>
       <div class="tw"><table>
         <thead><tr>${heads.slice(0,10).filter(h=>h).map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
-        <tbody>${data.map(r=>`<tr>${r.slice(0,10).map(c=>`<td>${esc(String(c||''))}</td>`).join('')}</tr>`).join('')}</tbody>
+        <tbody>${data.slice(0,10).map(r=>`<tr>${r.slice(0,10).map(c=>`<td>${esc(String(c||''))}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+    <div class="card" style="margin-top:.75rem">
+      <div class="ch"><span class="ct">AVEX édition pêche</span></div>
+      <div class="tw"><table>
+        <thead><tr><th>#</th><th>Épisode</th><th>Date tournage</th></tr></thead>
+        <tbody>${data.filter((_,i)=>i>=11&&i<=30).filter(r=>r[1]&&r[2]).map(r=>`<tr><td>${esc(String(r[1]||''))}</td><td>${esc(String(r[2]||''))}</td><td style="color:var(--tx2)">${esc(String(r[3]||''))}</td></tr>`).join('')}</tbody>
       </table></div>
     </div>`;
 }
@@ -510,7 +454,9 @@ function rSpons(){
   document.getElementById('pg-commanditaires').innerHTML=`
     <div class="card">
       <div class="ch"><span class="ct">Commanditaires (${_sData.length})</span>
-        <button class="btn p" onclick="openAddSponsor()">+ Nouveau commanditaire</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn p" onclick="openAddSponsor()">+ Nouveau commanditaire</button>
+        </div>
       </div>
       <div class="fr">
         <select id="sf-sp" onchange="filterSpons()" style="padding:5px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2)">
@@ -522,7 +468,7 @@ function rSpons(){
         <input type="text" id="sq" placeholder="Rechercher..." oninput="filterSpons()" style="padding:5px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2);min-width:160px">
       </div>
       <div class="tw"><table>
-        <thead><tr><th>S.</th><th>Commanditaire</th><th>État contrat</th><th>Argent signé</th><th>Spot</th><th>Facture(s)</th><th>Fact. envoyée</th><th>Paiement</th><th>Val. produits</th><th>Diffuseurs</th><th>Produits</th><th>Actions</th></tr></thead>
+        <thead><tr><th>S.</th><th>Commanditaire</th><th>État contrat</th><th>Argent signé</th><th>Spot</th><th>Facture(s)</th><th>Fact. envoyée</th><th>Paiement</th><th>Val. produits</th><th>Diffuseurs</th><th>Produits liés</th><th style="width:80px">Actions</th></tr></thead>
         <tbody id="spons-body"></tbody>
       </table></div>
       <div class="ar"><span style="font-size:11px;color:var(--tx2)" id="spons-cnt"></span></div>
@@ -564,11 +510,12 @@ function filterSpons(){
 }
 window.showProds=function(nom,sais){
   const pp=(GS['Produits de commandites']||[]).slice(1).filter(r=>String(r[0]||'').toLowerCase().trim()===nom.toLowerCase().trim()&&String(r[1]||'')==String(sais));
-  openModal(`<h3>Produits — ${esc(nom)} (S${esc(sais)})</h3>
+  openModal(`<h3>Produits de commandite — ${esc(nom)} (S${esc(sais)})</h3>
     <table style="width:100%;font-size:12px;border-collapse:collapse">
-      <thead><tr><th style="text-align:left;padding:5px 8px;background:var(--bg2);border-bottom:0.5px solid var(--bd)">Produit</th><th style="padding:5px 8px;background:var(--bg2)">Valeur</th><th style="padding:5px 8px;background:var(--bg2)">Reçu</th></tr></thead>
-      <tbody>${pp.map(p=>`<tr><td style="padding:5px 8px;border-bottom:0.5px solid var(--bd)">${esc(String(p[2]||''))}</td><td style="padding:5px 8px">${esc(String(p[3]||''))}</td><td style="padding:5px 8px">${esc(String(p[4]||'Non'))}</td></tr>`).join('')}
-      </tbody></table>
+      <thead><tr><th style="text-align:left;padding:5px 8px;background:var(--bg2);border-bottom:0.5px solid var(--bd)">Produit</th><th style="padding:5px 8px;background:var(--bg2);border-bottom:0.5px solid var(--bd)">Valeur</th><th style="padding:5px 8px;background:var(--bg2);border-bottom:0.5px solid var(--bd)">Reçu</th></tr></thead>
+      <tbody>${pp.map(p=>`<tr><td style="padding:5px 8px;border-bottom:0.5px solid var(--bd)">${esc(String(p[2]||''))}</td><td style="padding:5px 8px;border-bottom:0.5px solid var(--bd)">${esc(String(p[3]||''))}</td><td style="padding:5px 8px">${esc(String(p[4]||'Non'))}</td></tr>`).join('')}
+      </tbody>
+    </table>
     <div class="ma"><button class="btn" onclick="closeModal()">Fermer</button></div>`);
 };
 function openAddSponsor(){
@@ -587,7 +534,7 @@ function openAddSponsor(){
     </div>
     <div class="gr2">
       <div class="ff"><label>Facture(s)</label><input id="ns-f" placeholder="1045, 1046..."></div>
-      <div class="ff"><label>État paiement</label><select id="ns-p"><option>En attente</option><option>Payé</option><option>À facturer</option><option>Interne</option></select></div>
+      <div class="ff"><label>État paiement</label><select id="ns-p"><option>En attente</option><option>Payé</option><option>À facturer</option><option>Interne</option><option>N/A</option></select></div>
     </div>
     <div class="ff"><label>Valeur produits fournis</label><input id="ns-vp" placeholder="5 000$"></div>
     <div class="ma">
@@ -596,7 +543,18 @@ function openAddSponsor(){
     </div>`);
 }
 async function saveSponsor(){
-  try{await apiPost({action:'append',sheet:'Commanditaires',row:[document.getElementById('ns-s').value,document.getElementById('ns-n').value,document.getElementById('ns-e').value,'FALSE','',document.getElementById('ns-a').value,document.getElementById('ns-f').value,'FALSE',document.getElementById('ns-p').value,document.getElementById('ns-sp').value,'FALSE',document.getElementById('ns-vp').value,'','',document.getElementById('ns-di').value]});closeModal();await reloadSheet('Commanditaires');rSpons();}catch(e){alert('Erreur: '+e.message);}
+  try{
+    await apiPost({action:'append',sheet:'Commanditaires',row:[
+      document.getElementById('ns-s').value,document.getElementById('ns-n').value,
+      document.getElementById('ns-e').value,'FALSE','',
+      document.getElementById('ns-a').value,document.getElementById('ns-f').value,
+      'FALSE',document.getElementById('ns-p').value,
+      document.getElementById('ns-sp').value,'FALSE',
+      document.getElementById('ns-vp').value,'','',
+      document.getElementById('ns-di').value
+    ]});
+    closeModal();await reload('Commanditaires');rSpons();
+  }catch(e){alert('Erreur: '+e.message);}
 }
 
 // ── PRODUITS ──────────────────────────────────────────────────
@@ -612,17 +570,22 @@ function rProd(){
         <input type="text" id="pq" placeholder="Rechercher commanditaire..." oninput="filterProd()" style="padding:5px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2);min-width:180px">
       </div>
       <div class="tw"><table>
-        <thead><tr><th>Commanditaire</th><th>Saison</th><th>Produit fourni</th><th>Valeur</th><th>Reçu</th><th>Emplacement</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Commanditaire</th><th>Saison</th><th>Produit fourni</th><th>Valeur</th><th>Reçu</th><th>Emplacement</th><th>Fiche</th><th style="width:80px">Actions</th></tr></thead>
         <tbody id="prod-body"></tbody>
       </table></div>
     </div>`;
-  window._prodData=data;filterProd();
+  window._prodData=data;
+  filterProd();
 }
 function filterProd(){
   const fs=document.getElementById('pf-s')?.value||'';
   const fq=(document.getElementById('pq')?.value||'').toLowerCase();
   const data=window._prodData||[];
-  const filtered=data.filter(r=>{if(fs&&String(v(r,1))!==fs)return false;if(fq&&!v(r,0).toLowerCase().includes(fq))return false;return true;});
+  const filtered=data.filter(r=>{
+    if(fs&&String(v(r,1))!==fs)return false;
+    if(fq&&!v(r,0).toLowerCase().includes(fq))return false;
+    return true;
+  });
   const rowIdx=r=>data.indexOf(r)+2;
   document.getElementById('prod-body').innerHTML=filtered.map(r=>`<tr>
     <td style="font-weight:500">${esc(v(r,0))}</td>
@@ -631,13 +594,22 @@ function filterProd(){
     <td><input value="${esc(v(r,3))}" onchange="updateCell('Produits de commandites',${rowIdx(r)},4,this.value)" style="min-width:70px"></td>
     <td><select onchange="updateCell('Produits de commandites',${rowIdx(r)},5,this.value)"><option${!v(r,4)||v(r,4)==='Non'?' selected':''}>Non</option><option${v(r,4)==='Oui'?' selected':''}>Oui</option></select></td>
     <td><input value="${esc(v(r,5))}" onchange="updateCell('Produits de commandites',${rowIdx(r)},6,this.value)" style="min-width:100px"></td>
+    <td><span class="rel" onclick="jumpToSponsor('${esc(v(r,0))}','${esc(v(r,1))}')">S${esc(v(r,1))}</span></td>
     <td><button class="del-btn" onclick="deleteRow('Produits de commandites',${rowIdx(r)},rProd)">Supprimer</button></td>
-  </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--tx2)">Aucun résultat</td></tr>';
+  </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--tx2)">Aucun résultat</td></tr>';
 }
+window.jumpToSponsor=function(nom,sais){
+  document.querySelectorAll('.nb').forEach(b=>{if(b.textContent.includes('Commanditaires'))b.click();});
+  setTimeout(()=>{
+    const sq=document.getElementById('sq');const sf=document.getElementById('sf-sp');
+    if(sq){sq.value=nom;sq.dispatchEvent(new Event('input'));}
+    if(sf){sf.value=sais;sf.dispatchEvent(new Event('change'));}
+  },300);
+};
 function openAddProduit(){
   openModal(`<h3>Nouveau produit de commandite</h3>
     <div class="gr2">
-      <div class="ff"><label>Commanditaire</label><input id="np-c" placeholder="Nom exact"></div>
+      <div class="ff"><label>Commanditaire</label><input id="np-c" placeholder="Nom exact du commanditaire"></div>
       <div class="ff"><label>Saison</label><input id="np-s" type="number" placeholder="3"></div>
     </div>
     <div class="ff"><label>Produit fourni</label><input id="np-p" placeholder="Vêtements de chasse, équipement..."></div>
@@ -652,10 +624,18 @@ function openAddProduit(){
     </div>`);
 }
 async function saveProduit(){
-  try{await apiPost({action:'append',sheet:'Produits de commandites',row:[document.getElementById('np-c').value,document.getElementById('np-s').value,document.getElementById('np-p').value,document.getElementById('np-v').value,document.getElementById('np-r').value,document.getElementById('np-e').value]});closeModal();await reloadSheet('Produits de commandites');rProd();}catch(e){alert('Erreur: '+e.message);}
+  try{
+    await apiPost({action:'append',sheet:'Produits de commandites',row:[
+      document.getElementById('np-c').value,document.getElementById('np-s').value,
+      document.getElementById('np-p').value,document.getElementById('np-v').value,
+      document.getElementById('np-r').value,document.getElementById('np-e').value
+    ]});
+    closeModal();await reload('Produits de commandites');rProd();
+  }catch(e){alert('Erreur: '+e.message);}
 }
 
 // ── ÉPISODES WEB ──────────────────────────────────────────────
+let _epSF=1;
 function rEp(){
   const raw=GS['Épisodes WEB']||[];
   const groups={};let s=1;
@@ -676,7 +656,7 @@ function rEp(){
       <div class="ep-grid" id="ep-grid"></div>
     </div>`;
   window._epGroups=groups;
-  renderEps(seasons[0]||1);
+  renderEps(1);
   window.setEpSF=(s,el)=>{document.querySelectorAll('#sf-ep .sfb').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderEps(s);};
 }
 function renderEps(s){
@@ -691,7 +671,7 @@ function renderEps(s){
   </div>`).join('');
 }
 
-// ── SODEC ─────────────────────────────────────────────────────
+// ── SODEC ──────────────────────────────────────────────────────
 function rSodec(){
   const data=rows('SODEC');
   const heads=(GS['SODEC']||[[]])[0]||[];
@@ -735,11 +715,12 @@ function rTask(){
   }
   document.getElementById('pg-taches').innerHTML=`
     <div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap">
-      <button class="btn sm" style="font-weight:600" id="tf-all" onclick="setTaskFilt('all',this)">Toutes</button>
+      <button class="btn sm on" id="tf-all" onclick="setTaskFilt('all',this)">Toutes</button>
       <button class="btn sm" id="tf-urg" onclick="setTaskFilt('urgent',this)">Urgentes</button>
       <button class="btn sm" id="tf-imp" onclick="setTaskFilt('important',this)">Importantes</button>
       <button class="btn sm" id="tf-dos" onclick="setTaskFilt('dossier',this)">Dossiers</button>
       <button class="btn p sm" onclick="openAddTask()">+ Nouvelle tâche</button>
+      <button class="sbtn" onclick="syncSheet('à faire').then(rTask)">Actualiser</button>
     </div>
     <div id="task-cnt"></div>`;
   window.setTaskFilt=(f,el)=>{filt=f;document.querySelectorAll('[id^=tf-]').forEach(b=>b.style.fontWeight='');el.style.fontWeight='600';render();};
@@ -761,28 +742,48 @@ function openAddTask(){
 }
 async function saveTask(){
   const pr=document.getElementById('ntk-pr').value;
-  try{await apiPost({action:'append',sheet:'à faire',row:[document.getElementById('ntk-p').value,document.getElementById('ntk-t').value,pr==='urgent'?'x':'',pr==='important'?'x':'',pr==='dossier'?'x':'',document.getElementById('ntk-d').value]});closeModal();await reloadSheet('à faire');rTask();}catch(e){alert('Erreur: '+e.message);}
+  try{
+    await apiPost({action:'append',sheet:'à faire',row:[
+      document.getElementById('ntk-p').value,
+      document.getElementById('ntk-t').value,
+      pr==='urgent'?'x':'',pr==='important'?'x':'',pr==='dossier'?'x':'',
+      document.getElementById('ntk-d').value
+    ]});
+    closeModal();await reload('à faire');rTask();
+  }catch(e){alert('Erreur: '+e.message);}
 }
 
-// ── CRUD ─────────────────────────────────────────────────────
+// ── OPÉRATIONS CRUD ───────────────────────────────────────────
 async function updateCell(sheet,rowIdx,colIdx,value){
-  try{await apiPost({action:'update',sheet,row:rowIdx,col:colIdx,value});}
-  catch(e){console.error('Update error:',e);}
-}
-async function deleteRow(sheet,rowIdx,refreshFn){
-  if(!confirm('Supprimer cette ligne?'))return;
-  try{await apiPost({action:'delete',sheet,row:rowIdx});await reloadSheet(sheet);refreshFn();}
-  catch(e){alert('Erreur: '+e.message);}
+  try{
+    await apiPost({action:'update',sheet,row:rowIdx,col:colIdx,value});
+  }catch(e){console.error('Update error:',e);alert('Erreur sauvegarde: '+e.message);}
 }
 
-// ── INIT ─────────────────────────────────────────────────────
+async function deleteRow(sheet,rowIdx,refreshFn){
+  if(!confirm('Supprimer cette ligne ? Cette action est irréversible dans Google Sheets.'))return;
+  try{
+    await apiPost({action:'delete',sheet,row:rowIdx});
+    await reload(sheet);
+    refreshFn();
+  }catch(e){alert('Erreur: '+e.message);}
+}
+
+async function syncSheet(sheet){
+  await reload(sheet);
+}
+
+// ── INIT ──────────────────────────────────────────────────────
 (async()=>{
   const ok=await loadAll();
   if(ok){rDash();}
   else{
     document.getElementById('pg-dash').innerHTML=`<div class="err">
       <strong>Impossible de se connecter à Google Sheets.</strong><br><br>
-      Vérifiez que la clé API est valide et que le Sheet est partagé publiquement.
+      Vérifiez que :<br>
+      1. Le Google Sheet est partagé (Toute personne avec le lien → Éditeur)<br>
+      2. Le script Apps Script est bien déployé en accès "Tout le monde"<br><br>
+      Si le problème persiste, ouvrez la console (F12) pour voir l'erreur exacte.
     </div>`;
   }
 })();
