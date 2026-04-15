@@ -120,6 +120,7 @@ td input[type=checkbox]{width:auto;min-width:0}
   <button class="nb" onclick="goTab('episodes',this)">Épisodes Web</button>
   <button class="nb" onclick="goTab('sodec',this)">SODEC</button>
   <button class="nb" onclick="goTab('taches',this)">À faire</button>
+  <button class="nb" onclick="goTab('details',this)">Détails saisons</button>
 </div>
 
 <div id="pg-dash" class="pg on"><div class="loader"><div class="spin"></div>Connexion à Google Sheets...</div></div>
@@ -131,6 +132,7 @@ td input[type=checkbox]{width:auto;min-width:0}
 <div id="pg-episodes" class="pg"></div>
 <div id="pg-sodec" class="pg"></div>
 <div id="pg-taches" class="pg"></div>
+<div id="pg-details" class="pg"></div>
 
 </div>
 
@@ -181,7 +183,7 @@ async function apiPost(payload){
   finally{setSaving(false);}
 }
 
-const SHEETS=['Calendrier tournages','Commanditaires','Ordre de diffusion TV','à faire','Produits de commandites','Épisodes WEB','SODEC','ordre Diffusion'];
+const SHEETS=['Calendrier tournages','Commanditaires','Ordre de diffusion TV','à faire','Produits de commandites','Épisodes WEB','SODEC','ordre Diffusion','Détails par saison'];
 
 async function loadAll(){
   setStatus('am','Chargement...');
@@ -204,13 +206,13 @@ function goTab(id,el){
   document.getElementById('pg-'+id).classList.add('on');
   el.classList.add('on');
   currentTab=id;
-  ({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask})[id]?.();
+  ({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask,details:rDetails})[id]?.();
 }
 
 async function syncAll(){
   setStatus('am','Synchronisation...');
   const ok=await loadAll();
-  if(ok)({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask})[currentTab]?.();
+  if(ok)({dash:rDash,tournages:rTour,diffusion:rDiff,ordre:rOrdre,commanditaires:rSpons,produits:rProd,episodes:rEp,sodec:rSodec,taches:rTask,details:rDetails})[currentTab]?.();
 }
 
 // ── TABLEAU DE BORD ───────────────────────────────────────────
@@ -775,6 +777,89 @@ async function deleteRow(sheet,rowIdx,refreshFn){
 
 async function syncSheet(sheet){
   await reload(sheet);
+}
+
+// ── DÉTAILS PAR SAISON ────────────────────────────────────────
+let _detData=[];
+function rDetails(){
+  _detData=rows('Détails par saison');
+  const seasons=[...new Set(_detData.map(r=>v(r,2)).filter(x=>x&&!isNaN(x)))].sort((a,b)=>+a-+b);
+  document.getElementById('pg-details').innerHTML=`
+    <div class="card">
+      <div class="ch">
+        <span class="ct">Détails par saison — Site web (${_detData.length} épisodes)</span>
+        <button class="btn p sm" onclick="openAddDetail()">+ Ajouter épisode</button>
+      </div>
+      <div class="fr">
+        <select id="det-sf" onchange="filterDetails()" style="padding:5px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2)">
+          <option value="">Toutes saisons</option>
+          ${seasons.map(s=>`<option value="${s}">Saison ${s}</option>`).join('')}
+        </select>
+        <input type="text" id="det-q" placeholder="Rechercher épisode ou espèce..." oninput="filterDetails()" style="padding:5px 8px;font-size:12px;border:0.5px solid var(--bd2);border-radius:var(--r);background:var(--bg2);min-width:200px">
+      </div>
+      <div class="tw"><table>
+        <thead><tr>
+          <th>Épisode</th><th>Titre</th><th>Saison</th><th>Emplacement / Pays</th><th>Espèces</th><th>Synopsis</th><th style="width:80px">Actions</th>
+        </tr></thead>
+        <tbody id="det-body"></tbody>
+      </table></div>
+      <div class="ar"><span style="font-size:11px;color:var(--tx2)" id="det-cnt"></span></div>
+    </div>`;
+  filterDetails();
+}
+
+function filterDetails(){
+  const fs=document.getElementById('det-sf')?.value||'';
+  const fq=(document.getElementById('det-q')?.value||'').toLowerCase();
+  const filtered=_detData.filter(r=>{
+    if(fs&&String(v(r,2))!==fs)return false;
+    if(fq&&!v(r,0).toLowerCase().includes(fq)&&!v(r,1).toLowerCase().includes(fq)&&!v(r,4).toLowerCase().includes(fq))return false;
+    return true;
+  });
+  const rowIdx=r=>_detData.indexOf(r)+2;
+  document.getElementById('det-body').innerHTML=filtered.map(r=>`<tr>
+    <td><input value="${esc(v(r,0))}" onchange="updateCell('Détails par saison',${rowIdx(r)},1,this.value)" style="min-width:130px;font-size:11px;font-family:monospace"></td>
+    <td><input value="${esc(v(r,1))}" onchange="updateCell('Détails par saison',${rowIdx(r)},2,this.value)" style="min-width:160px"></td>
+    <td style="text-align:center"><input value="${esc(v(r,2))}" onchange="updateCell('Détails par saison',${rowIdx(r)},3,this.value)" style="width:40px;text-align:center"></td>
+    <td><input value="${esc(v(r,3))}" onchange="updateCell('Détails par saison',${rowIdx(r)},4,this.value)" style="min-width:150px;font-size:11px"></td>
+    <td><input value="${esc(v(r,4))}" onchange="updateCell('Détails par saison',${rowIdx(r)},5,this.value)" style="min-width:110px"></td>
+    <td><textarea onchange="updateCell('Détails par saison',${rowIdx(r)},6,this.value)" style="min-width:220px;height:38px;resize:vertical;font-size:11px;line-height:1.4">${esc(v(r,5))}</textarea></td>
+    <td><button class="del-btn" onclick="deleteRow('Détails par saison',${rowIdx(r)},rDetails)">Supprimer</button></td>
+  </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--tx2)">Aucun résultat</td></tr>';
+  const el=document.getElementById('det-cnt');
+  if(el)el.textContent=`${filtered.length} / ${_detData.length} épisodes`;
+}
+
+function openAddDetail(){
+  openModal(`<h3>Nouvel épisode — Détails site web</h3>
+    <div class="gr2">
+      <div class="ff"><label>Code épisode</label><input id="nd-ep" placeholder="AventuresExpressTV S04 EP01 VF"></div>
+      <div class="ff"><label>Saison</label><input id="nd-s" type="number" placeholder="4" min="1"></div>
+    </div>
+    <div class="ff"><label>Titre</label><input id="nd-ti" placeholder="Titre de l'épisode"></div>
+    <div class="ff"><label>Emplacement / Pays</label><input id="nd-loc" placeholder="ex: Yucatan, Mexique — Amérique du Nord"></div>
+    <div class="ff"><label>Espèces</label><input id="nd-esp" placeholder="ex: Dindon Mexique, Ours noir..."></div>
+    <div class="ff"><label>Synopsis</label><textarea id="nd-syn" rows="4" placeholder="Description pour le site web..."></textarea></div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn p" onclick="saveDetail()">Ajouter dans Google Sheets</button>
+    </div>`);
+}
+
+async function saveDetail(){
+  try{
+    await apiPost({action:'append',sheet:'Détails par saison',row:[
+      document.getElementById('nd-ep').value,
+      document.getElementById('nd-ti').value,
+      document.getElementById('nd-s').value,
+      document.getElementById('nd-loc').value,
+      document.getElementById('nd-esp').value,
+      document.getElementById('nd-syn').value
+    ]});
+    closeModal();
+    await reload('Détails par saison');
+    rDetails();
+  }catch(e){alert('Erreur: '+e.message);}
 }
 
 // ── INIT ──────────────────────────────────────────────────────
